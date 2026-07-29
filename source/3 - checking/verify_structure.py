@@ -62,7 +62,7 @@ def verify():
             print(f"  {bk:02d} {name}: chapitres ✗ ST={st_chs} MES={mes_chs}")
             errors += 1
             continue
-        ok = True
+        print(f"  {bk:02d} {name}:")
         for ch in st_chs:
             st_vs = sorted([k[2] for k in st if k[0] == bk and k[1] == ch])
             mes_vs = sorted([k[2] for k in mes if k[0] == bk and k[1] == ch])
@@ -77,10 +77,8 @@ def verify():
                 print()
                 errors += 1
                 errors_ch += 1
-                ok = False
-        if ok:
-            total_vs = sum(len([k[2] for k in st if k[0] == bk and k[1] == ch]) for ch in st_chs)
-            print(f"  {bk:02d} {name}: {len(st_chs)} ch, {total_vs} v  ✓")
+            else:
+                print(f"    {ch:03d}: {len(mes_vs)}v  ✓")
     if errors_ch == 0:
         print("  Tous les chapitres: nombre de versets correct ✓")
 
