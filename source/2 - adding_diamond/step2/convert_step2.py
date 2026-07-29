@@ -152,11 +152,13 @@ def align_chapter(f35_verses, st_verses, bk, ch):
     splits = detect_splits(f35_verses, st_verses)
 
     carryover = ''
+    st_empty_count = 0
 
     for i, (st_vs, st_text) in enumerate(st_verses):
         st_ref = f"{bk:02d}{ch:03d}{st_vs:03d}"
 
         if st_text == "-":
+            st_empty_count += 1
             lines.append(f"{st_ref} -")
             continue
 
@@ -195,7 +197,7 @@ def align_chapter(f35_verses, st_verses, bk, ch):
             remaining_st = sum(1 for j in range(i, st_count) if st_verses[j][1] != "-")
             remaining_f35 = f35_count - f35_idx + (1 if carryover else 0)
 
-            if not carryover and remaining_st == 1 and (remaining_f35 > 0 or f35_vs != st_vs):
+            if not carryover and remaining_st == 1 and (remaining_f35 > 0 or f35_vs != st_vs - st_empty_count):
                 merged = f35_text
                 if f35_vs != st_vs:
                     merged = f"⋄{f35_vs}{merged}"
