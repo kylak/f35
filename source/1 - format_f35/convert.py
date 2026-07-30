@@ -125,7 +125,7 @@ def main() -> None:
     parser.add_argument(
         "--readaloud-dir",
         default=os.path.join(os.path.dirname(__file__), ".", "source", "readaloud"),
-        help="Path to the readaloud directory (default: ../source/readaloud)",
+        help="Path to the readaloud directory (default: source/readaloud)",
     )
     parser.add_argument(
         "--output",
