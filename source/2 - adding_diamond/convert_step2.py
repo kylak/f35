@@ -234,7 +234,7 @@ def align_chapter(f35_verses, st_verses, bk, ch):
     Returns:
         list of formatted output lines.
     """
-    lines = []
+    lines = []                 # list of (sort_key, line_text) tuples
     f35_idx = 0                # current index into the F35 verse list
     f35_count = len(f35_verses)
     st_count = len(st_verses)
@@ -246,6 +246,7 @@ def align_chapter(f35_verses, st_verses, bk, ch):
     splits = detect_splits(f35_verses, st_verses)
 
     carryover = ""             # text split from a previous verse, pending for the next
+    carryover_vs = 0           # F35 verse number that the carryover belongs to
     st_empty_count = 0         # number of empty ST verses seen (for offset tracking)
     need_diamond_vs = 0        # F35 verse number to mark with ⋄ on the next line
 
@@ -255,12 +256,12 @@ def align_chapter(f35_verses, st_verses, bk, ch):
         # --- Empty ST verse (e.g. LUK 17:36) ---
         if st_text == "-":
             st_empty_count += 1
-            lines.append(f"{st_ref} -")
+            lines.append((st_vs - 0.001, f"{st_ref} -"))
             continue
 
         # --- No F35 verse left to assign ---
         if f35_idx >= f35_count and not carryover:
-            lines.append(f"{st_ref} -")
+            lines.append((st_vs - 0.001, f"{st_ref} -"))
             continue
 
         # --- Split handling ---
@@ -279,10 +280,11 @@ def align_chapter(f35_verses, st_verses, bk, ch):
             st_next_text = st_verses[i + 1][1] if i + 1 < st_count else ""
             before, after = split_at_st(f35_text_b, st_next_text)
             carryover = after
+            carryover_vs = f35_vs_b
 
             diamond_num = str(f35_vs_b)
             merged = f"{f35_text_a} ⋄{diamond_num}{before}"
-            lines.append(f"{st_ref} {merged.rstrip()}")
+            lines.append((f35_vs_a, f"{st_ref} {merged.rstrip()}"))
             continue
 
         # --- Normal (non-split) verse ---
@@ -292,11 +294,14 @@ def align_chapter(f35_verses, st_verses, bk, ch):
                 # consumed yet — assign it to this ST verse.
                 f35_text = carryover
                 carryover = ""
+                sort_key = carryover_vs
+                carryover_vs = 0
                 f35_vs = None  # verse number determined by context
             else:
                 # Normal 1-to-1 mapping: consume the next F35 verse.
                 f35_vs, f35_text = f35_verses[f35_idx]
                 f35_idx += 1
+                sort_key = f35_vs
 
                 # If the previous verse was swapped out, mark this one with
                 # the ←original→ F35 verse number as a diamond.
@@ -324,6 +329,7 @@ def align_chapter(f35_verses, st_verses, bk, ch):
                                 # number so the reader knows this verse was
                                 # swapped (F35 v(i) and ST v(k) are reversed).
                                 f35_text = f"⋄{f35_vs}{f35_text}"
+                                sort_key = f35_vs
                                 # The swapped-out verse will appear on the next
                                 # ST line — mark it with a diamond too.
                                 need_diamond_vs = orig_vs
@@ -350,12 +356,15 @@ def align_chapter(f35_verses, st_verses, bk, ch):
                     extra_vs, extra_text = f35_verses[f35_idx]
                     merged += f" ⋄{extra_vs}{extra_text}"
                     f35_idx += 1
-                lines.append(f"{st_ref} {merged}")
+                sort_key = f35_vs
+                lines.append((sort_key, f"{st_ref} {merged}"))
             else:
                 # Standard output: one F35 verse → one ST line.
-                lines.append(f"{st_ref} {f35_text}")
+                lines.append((sort_key, f"{st_ref} {f35_text}"))
 
-    return lines
+    # Sort by F35 verse order (preserves F35's original versification order)
+    lines.sort(key=lambda x: x[0])
+    return [line_text for _, line_text in lines]
 
 
 def main():
