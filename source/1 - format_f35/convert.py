@@ -11,7 +11,7 @@ where bb = book number (40-66 for NT), ccc = chapter, vvv = verse.
 Usage:
     python convert.py [--readaloud-dir PATH] [--output FILE]
 
-The --readaloud-dir defaults to ../source/readaloud relative to this script.
+The --readaloud-dir defaults to source/readaloud relative to this script.
 The --output defaults to F35.txt in the current directory.
 """
 
