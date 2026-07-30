@@ -30,7 +30,7 @@ Example (`source/readaloud/grcf35_070_MAT_01_read.txt`):
 ### 1. Convert
 
 ```bash
-python convert.py --readaloud-dir ../source/readaloud --output F35.txt
+python convert.py --readaloud-dir source/readaloud --output F35.txt
 ```
 
 Or, from the repository root:

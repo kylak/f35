@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Verify that a bbcccvvv-formatted Bible file meets the specification.
+"""
+Verify that a bbcccvvv-formatted Bible file meets the specification.
 
 Checks:
     - Every line matches ^[0-9]{8} .+
@@ -8,7 +9,7 @@ Checks:
     - UTF-8 encoding, Unix line endings
     - Correct book range (NT-only: 40-66)
     - No HTML tags, HTML entities, or multiple consecutive spaces
-    - No duplicate verse references (unless intentional)
+    - No duplicate verse references
 
 Usage:
     python verify.py [FILE]
@@ -18,7 +19,7 @@ import argparse
 import re
 import sys
 
-
+# Regex for a valid bbcccvvv line: 8 digits, a space, then the verse text.
 RE_LINE = re.compile(r"^([0-9]{8}) (.+)$")
 RE_HTML_TAG = re.compile(r"<[^>]+>")
 RE_HTML_ENT = re.compile(r"&[a-zA-Z#][a-zA-Z0-9#]*;")
@@ -34,18 +35,16 @@ def verify(filepath: str) -> bool:
     with open(filepath, encoding="utf-8") as fh:
         raw = fh.read()
 
-    # ------------------------------------------------------------------
-    # Encoding checks
-    # ------------------------------------------------------------------
+    # --- Encoding check ---
+    # Verify the file can be re-encoded as UTF-8 without errors.
     try:
-        encoded = raw.encode("utf-8")
+        raw.encode("utf-8")
     except UnicodeEncodeError as e:
         print(f"  FAIL  File cannot be encoded as UTF-8: {e}")
         errors += 1
 
-    # ------------------------------------------------------------------
-    # Line-ending check
-    # ------------------------------------------------------------------
+    # --- Line-ending check ---
+    # The specification requires Unix (LF) line endings.
     if "\r\n" in raw:
         print("  FAIL  File contains CRLF line endings (should be LF)")
         errors += 1
@@ -57,39 +56,36 @@ def verify(filepath: str) -> bool:
 
     lines = raw.splitlines()
 
-    # ------------------------------------------------------------------
-    # Per-line checks
-    # ------------------------------------------------------------------
+    # --- Per-line checks ---
     for lineno, line in enumerate(lines, start=1):
         total += 1
         m = RE_LINE.match(line)
         if not m:
             print(f"  FAIL  Line {lineno}: does not match '^[0-9]{{8}} .+'")
-            print(f"        → {repr(line[:80])}")
+            print(f"        -> {repr(line[:80])}")
             errors += 1
             continue
 
         ref, text = m.group(1), m.group(2)
 
-        # Check reference is exactly 8 digits
+        # Verify the reference is exactly 8 characters long.
         if len(ref) != 8:
             print(f"  FAIL  Line {lineno}: reference '{ref}' is not 8 characters")
             errors += 1
 
-        # Check exactly one space between ref and text
+        # Verify exactly one space separates the reference from the text.
         if not line.startswith(ref + " "):
             print(f"  FAIL  Line {lineno}: expected single space after reference")
             errors += 1
 
-        # Check for duplicate refs
+        # Warn if the same reference appears more than once.
         if ref in refs_seen:
             print(f"  WARN  Line {lineno}: duplicate reference {ref}")
             warnings += 1
         refs_seen.add(ref)
 
-    # ------------------------------------------------------------------
-    # Book-range check (NT-only: 40-66)
-    # ------------------------------------------------------------------
+    # --- Book-range check ---
+    # The F35 is a New Testament manuscript, so only books 40-66 are valid.
     books = sorted({line[:2] for line in lines})
     book_nums = [int(b) for b in books]
     if book_nums and (min(book_nums) < 40 or max(book_nums) > 66):
@@ -98,11 +94,9 @@ def verify(filepath: str) -> bool:
     else:
         print(f"  OK    Book range: {', '.join(books)}  (NT-only: 40-66)")
 
-    # ------------------------------------------------------------------
-    # Content-cleaning checks (sample the raw text without refs)
-    # ------------------------------------------------------------------
+    # --- Content-cleaning checks ---
+    # Verify that no HTML artefacts remain in the verse texts.
     texts = [m.group(2) for m in (RE_LINE.match(l) for l in lines) if m]
-
     combined = " ".join(texts)
 
     if RE_HTML_TAG.search(combined):
@@ -123,9 +117,7 @@ def verify(filepath: str) -> bool:
     else:
         print("  OK    No multiple spaces")
 
-    # ------------------------------------------------------------------
-    # Summary
-    # ------------------------------------------------------------------
+    # --- Summary ---
     print()
     print(f"  Total lines: {total}")
     print(f"  Errors:   {errors}")
@@ -140,8 +132,13 @@ def verify(filepath: str) -> bool:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Verify bbcccvvv Bible file format")
-    parser.add_argument("file", nargs="?", default="F35.txt", help="File to verify (default: F35.txt)")
+    parser = argparse.ArgumentParser(
+        description="Verify bbcccvvv Bible file format"
+    )
+    parser.add_argument(
+        "file", nargs="?", default="F35.txt",
+        help="File to verify (default: F35.txt)"
+    )
     args = parser.parse_args()
 
     print(f"Verifying: {args.file}\n")
