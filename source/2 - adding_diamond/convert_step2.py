@@ -239,11 +239,15 @@ def align_chapter(f35_verses, st_verses, bk, ch):
     f35_count = len(f35_verses)
     st_count = len(st_verses)
 
+    # Convert to mutable list-of-lists so we can swap verses when needed.
+    f35_verses = [[vs, txt] for (vs, txt) in f35_verses]
+
     # Pre-detect all splits for this chapter.
     splits = detect_splits(f35_verses, st_verses)
 
     carryover = ""             # text split from a previous verse, pending for the next
     st_empty_count = 0         # number of empty ST verses seen (for offset tracking)
+    need_diamond_vs = 0        # F35 verse number to mark with ⋄ on the next line
 
     for i, (st_vs, st_text) in enumerate(st_verses):
         st_ref = f"{bk:02d}{ch:03d}{st_vs:03d}"
@@ -293,6 +297,37 @@ def align_chapter(f35_verses, st_verses, bk, ch):
                 # Normal 1-to-1 mapping: consume the next F35 verse.
                 f35_vs, f35_text = f35_verses[f35_idx]
                 f35_idx += 1
+
+                # If the previous verse was swapped out, mark this one with
+                # the ←original→ F35 verse number as a diamond.
+                if need_diamond_vs:
+                    f35_text = f"⋄{need_diamond_vs}{f35_text}"
+                    need_diamond_vs = 0
+
+                # --- Swap detection ---
+                # If the consumed F35 verse's rough text is NOT found inside
+                # the current ST verse, search forward among remaining F35
+                # verses for one whose text does match.  If found, swap their
+                # positions so the right text ends up at f35_idx-1.
+                if f35_text and st_text:
+                    if rough(f35_text) not in rough(st_text):
+                        # Save the original F35 verse number before swapping
+                        # so we can attach a ⋄ marker to the swapped-out verse.
+                        orig_vs = f35_vs
+                        for scan in range(f35_idx, min(f35_idx + 5, f35_count)):
+                            scan_vs, scan_text = f35_verses[scan]
+                            if scan_text and rough(scan_text) in rough(st_text):
+                                f35_verses[f35_idx - 1], f35_verses[scan] = \
+                                    f35_verses[scan], f35_verses[f35_idx - 1]
+                                f35_vs, f35_text = f35_verses[f35_idx - 1]
+                                # Add a diamond showing the original F35 verse
+                                # number so the reader knows this verse was
+                                # swapped (F35 v(i) and ST v(k) are reversed).
+                                f35_text = f"⋄{f35_vs}{f35_text}"
+                                # The swapped-out verse will appear on the next
+                                # ST line — mark it with a diamond too.
+                                need_diamond_vs = orig_vs
+                                break
 
             # How many non-empty ST verses remain (including this one)?
             remaining_st = sum(
